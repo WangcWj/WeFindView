@@ -1,0 +1,1 @@
+include ':app', ':view_compiler', ':view_annotation', ':we_findview'
