@@ -5,9 +5,15 @@ import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.api.BaseVariant
+import com.android.build.gradle.api.BaseVariantOutput
+import com.android.build.gradle.internal.res.GenerateLibraryRFileTask
+import com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask
+import com.android.build.gradle.internal.res.namespaced.ProcessAndroidAppResourcesTask
 import org.gradle.api.DomainObjectSet
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+
+import java.util.concurrent.atomic.AtomicBoolean
 
 class FindViewPlugins implements Plugin<Project> {
 
@@ -17,25 +23,56 @@ class FindViewPlugins implements Plugin<Project> {
 
             if (it instanceof LibraryPlugin) {
                 def variant = project.extensions.findByType(LibraryExtension.class).libraryVariants
-                configureR2Generation(variant)
+                configureR2Generation(project, variant)
             }
 
             if (it instanceof AppPlugin) {
                 def variant = project.extensions.findByType(AppExtension.class).applicationVariants
-                configureR2Generation(variant)
+                configureR2Generation(project, variant)
             }
         }
     }
 
     private void configureR2Generation(Project project, DomainObjectSet<? extends BaseVariant> variants) {
-        variants.all { BaseVariant variant->
+        variants.all { BaseVariant variant ->
 
-           def rootpath =  project.buildDir.absolutePath
-           def generationPath = rootpath+"generated/source/r2/${variant.getDirName()}"
+            def rootPath = project.buildDir.absolutePath
+            def generationPath = rootPath + "${File.separator}generated${File.separator}source${File.separator}r2${File.separator}${variant.getDirName()}"
+            System.println("生成文件的路径为：" + generationPath)
+            def packageName = getPackageName(variant)
+            System.println("包路径为：" + packageName)
+            def once = new AtomicBoolean()
+            variant.outputs.all {
+                BaseVariantOutput output ->
+                    if (once.compareAndSet(false, true)) {
+                        def res = output.processResources
+                        def orgFile
+                        if (res instanceof LinkApplicationAndroidResourcesTask) {
+                            orgFile = res.getTextSymbolOutputFile()
+                        } else if (res instanceof GenerateLibraryRFileTask) {
+                            orgFile = res.getTextSymbolOutputFile()
+                        }
+                        System.println("R文件的路径为路径为：" + orgFile.getAbsolutePath())
+                        if(orgFile){
+                            def varFile = project.files(orgFile).builtBy(res)
 
+                        }
 
+                    }
+
+            }
         }
 
+    }
+
+    private String getPackageName(BaseVariant variant) {
+        def xmlParse = new XmlSlurper(false, false)
+        List<File> list = new ArrayList<>()
+        variant.sourceSets.each {
+            list.add(it.manifestFile)
+        }
+        def result = xmlParse.parse(list.get(0))
+        return result.getProperty("@package").toString()
     }
 
 
