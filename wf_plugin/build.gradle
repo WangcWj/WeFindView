@@ -1,0 +1,22 @@
+apply plugin: 'groovy'
+apply plugin: 'maven'
+
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+    //这里面你想用什么就去引入什么
+    implementation 'com.android.tools.build:gradle:3.2.0'
+}
+
+repositories {
+    jcenter()
+}
+
+uploadArchives {
+    repositories.mavenDeployer {
+        repository(url: uri('../wf_plugin/src/main/depository'))
+        pom.groupId = 'cn.wang.findview'
+        pom.artifactId = 'plugin'
+        pom.version = "1.0.0"
+    }
+}

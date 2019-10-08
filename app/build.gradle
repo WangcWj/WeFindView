@@ -1,5 +1,5 @@
 apply plugin: 'com.android.application'
-
+apply plugin: 'cn.wefindview.plugin'
 android {
     compileSdkVersion 28
     defaultConfig {
@@ -31,7 +31,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 
-    annotationProcessor project(':view_compiler')
+    annotationProcessor project(':wf_compiler')
     implementation project(':we_findview')
 }
 

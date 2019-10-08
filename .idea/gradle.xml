@@ -9,12 +9,14 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/view_annotation" />
-            <option value="$PROJECT_DIR$/view_compiler" />
             <option value="$PROJECT_DIR$/we_findview" />
+            <option value="$PROJECT_DIR$/wf_annotation" />
+            <option value="$PROJECT_DIR$/wf_compiler" />
+            <option value="$PROJECT_DIR$/wf_plugin" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
+        <option name="testRunner" value="PLATFORM" />
       </GradleProjectSettings>
     </option>
   </component>

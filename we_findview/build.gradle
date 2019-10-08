@@ -27,7 +27,7 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
-    api project(':view_annotation')
+    api project(':wf_annotation')
 }
 
 sourceCompatibility = "1.8"
