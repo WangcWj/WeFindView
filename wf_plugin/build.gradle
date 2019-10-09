@@ -6,6 +6,7 @@ dependencies {
     implementation localGroovy()
     //这里面你想用什么就去引入什么
     implementation 'com.android.tools.build:gradle:3.2.0'
+    implementation 'com.squareup:javapoet:1.11.1'
 }
 
 repositories {

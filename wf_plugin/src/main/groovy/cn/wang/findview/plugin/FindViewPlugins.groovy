@@ -2,13 +2,14 @@ package cn.wang.findview.plugin
 
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.AppPlugin
+import com.android.build.gradle.FeatureExtension
+import com.android.build.gradle.FeaturePlugin
 import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.api.BaseVariant
 import com.android.build.gradle.api.BaseVariantOutput
 import com.android.build.gradle.internal.res.GenerateLibraryRFileTask
 import com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask
-import com.android.build.gradle.internal.res.namespaced.ProcessAndroidAppResourcesTask
 import org.gradle.api.DomainObjectSet
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -21,13 +22,21 @@ class FindViewPlugins implements Plugin<Project> {
     void apply(Project project) {
         project.plugins.each {
 
+            if(it instanceof FeaturePlugin){
+                def variant = project.extensions.getByType(FeatureExtension.class).libraryVariants
+                System.out.println("FeaturePlugin  ")
+                configureR2Generation(project, variant)
+            }
+
             if (it instanceof LibraryPlugin) {
                 def variant = project.extensions.findByType(LibraryExtension.class).libraryVariants
+                System.out.println("走的是Library  ")
                 configureR2Generation(project, variant)
             }
 
             if (it instanceof AppPlugin) {
                 def variant = project.extensions.findByType(AppExtension.class).applicationVariants
+                System.out.println("走的是AppPlugin  ")
                 configureR2Generation(project, variant)
             }
         }
@@ -38,9 +47,8 @@ class FindViewPlugins implements Plugin<Project> {
 
             def rootPath = project.buildDir.absolutePath
             def generationPath = rootPath + "${File.separator}generated${File.separator}source${File.separator}r2${File.separator}${variant.getDirName()}"
-            System.println("生成文件的路径为：" + generationPath)
+            def outPutDir = new File(generationPath)
             def packageName = getPackageName(variant)
-            System.println("包路径为：" + packageName)
             def once = new AtomicBoolean()
             variant.outputs.all {
                 BaseVariantOutput output ->
@@ -52,10 +60,18 @@ class FindViewPlugins implements Plugin<Project> {
                         } else if (res instanceof GenerateLibraryRFileTask) {
                             orgFile = res.getTextSymbolOutputFile()
                         }
-                        System.println("R文件的路径为路径为：" + orgFile.getAbsolutePath())
-                        if(orgFile){
+                        if (orgFile) {
                             def varFile = project.files(orgFile).builtBy(res)
-
+                            def generaTask = project.tasks.create("generate${variant.name.capitalize()}R2", R2Generator.class){
+                                if(it instanceof R2Generator){
+                                    R2Generator generator = it
+                                    generator.outputDir = outPutDir
+                                    generator.rFile = varFile
+                                    generator.packagename = packageName
+                                    generator.className = "R2"
+                                }
+                            }
+                            variant.registerJavaGeneratingTask(generaTask, outPutDir)
                         }
 
                     }

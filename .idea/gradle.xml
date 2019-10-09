@@ -9,6 +9,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/demo_main" />
             <option value="$PROJECT_DIR$/we_findview" />
             <option value="$PROJECT_DIR$/wf_annotation" />
             <option value="$PROJECT_DIR$/wf_compiler" />

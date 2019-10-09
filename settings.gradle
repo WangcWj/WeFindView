@@ -1,1 +1,1 @@
-include ':app', ':wf_compiler', ':wf_annotation', ':we_findview', ':wf_plugin'
+include ':app', ':wf_compiler', ':wf_annotation', ':we_findview', ':wf_plugin',':demo_main'

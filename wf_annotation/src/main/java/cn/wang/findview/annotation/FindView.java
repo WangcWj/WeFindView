@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * @author WANG
  */
 @Target(ElementType.FIELD)
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface FindView {
 
     int value();

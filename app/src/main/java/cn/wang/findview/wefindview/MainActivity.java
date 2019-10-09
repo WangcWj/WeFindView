@@ -8,6 +8,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import cn.wang.findview.annotation.FindView;
+import cn.wang.findview.main.DemoMainActivity;
 
 public class MainActivity extends AppCompatActivity {
 
