@@ -1,3 +1,5 @@
+import org.gradle.internal.jvm.Jvm
+
 apply plugin: 'java-library'
 
 dependencies {
@@ -7,6 +9,8 @@ dependencies {
     implementation 'com.squareup:javapoet:1.11.1'
     implementation 'org.apache.commons:commons-lang3:3.4'
     implementation 'com.alibaba:fastjson:1.2.48'
+
+    compileOnly files(Jvm.current().getToolsJar())
 }
 
 sourceCompatibility = "1.8"

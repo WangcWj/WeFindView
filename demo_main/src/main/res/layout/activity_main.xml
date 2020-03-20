@@ -9,7 +9,19 @@
         android:id="@+id/demo_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="王超超"
+        android:textSize="12dp"
         app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/demo_text2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="王超超"
+        android:textSize="24dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
 

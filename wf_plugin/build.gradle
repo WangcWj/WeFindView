@@ -18,6 +18,6 @@ uploadArchives {
         repository(url: uri('../wf_plugin/src/main/depository'))
         pom.groupId = 'cn.wang.findview'
         pom.artifactId = 'plugin'
-        pom.version = "1.0.0"
+        pom.version = "1.0.1"
     }
 }

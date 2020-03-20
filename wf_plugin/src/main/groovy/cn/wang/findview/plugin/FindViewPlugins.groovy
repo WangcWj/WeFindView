@@ -16,6 +16,9 @@ import org.gradle.api.Project
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * 仿照ButterKnife写的插件，原理不是很懂。
+ */
 class FindViewPlugins implements Plugin<Project> {
 
     @Override
@@ -25,28 +28,28 @@ class FindViewPlugins implements Plugin<Project> {
             if(it instanceof FeaturePlugin){
                 def variant = project.extensions.getByType(FeatureExtension.class).libraryVariants
                 System.out.println("FeaturePlugin  ")
-                configureR2Generation(project, variant)
+                configureGeneration(project, variant)
             }
 
             if (it instanceof LibraryPlugin) {
                 def variant = project.extensions.findByType(LibraryExtension.class).libraryVariants
                 System.out.println("走的是Library  ")
-                configureR2Generation(project, variant)
+                configureGeneration(project, variant)
             }
 
             if (it instanceof AppPlugin) {
                 def variant = project.extensions.findByType(AppExtension.class).applicationVariants
                 System.out.println("走的是AppPlugin  ")
-                configureR2Generation(project, variant)
+                configureGeneration(project, variant)
             }
         }
     }
 
-    private void configureR2Generation(Project project, DomainObjectSet<? extends BaseVariant> variants) {
+    private void configureGeneration(Project project, DomainObjectSet<? extends BaseVariant> variants) {
         variants.all { BaseVariant variant ->
 
             def rootPath = project.buildDir.absolutePath
-            def generationPath = rootPath + "${File.separator}generated${File.separator}source${File.separator}r2${File.separator}${variant.getDirName()}"
+            def generationPath = rootPath + "${File.separator}generated${File.separator}source${File.separator}weFind${File.separator}${variant.getDirName()}"
             def outPutDir = new File(generationPath)
             def packageName = getPackageName(variant)
             def once = new AtomicBoolean()
@@ -62,13 +65,13 @@ class FindViewPlugins implements Plugin<Project> {
                         }
                         if (orgFile) {
                             def varFile = project.files(orgFile).builtBy(res)
-                            def generaTask = project.tasks.create("generate${variant.name.capitalize()}R2", R2Generator.class){
-                                if(it instanceof R2Generator){
-                                    R2Generator generator = it
+                            def generaTask = project.tasks.create("generate${variant.name.capitalize()}find", R3Generator.class){
+                                if(it instanceof R3Generator){
+                                    R3Generator generator = it
                                     generator.outputDir = outPutDir
                                     generator.rFile = varFile
                                     generator.packagename = packageName
-                                    generator.className = "R2"
+                                    generator.className = "WeFindR"
                                 }
                             }
                             variant.registerJavaGeneratingTask(generaTask, outPutDir)

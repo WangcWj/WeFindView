@@ -13,9 +13,9 @@ import org.gradle.api.tasks.TaskAction
 import javax.lang.model.element.Modifier
 
 /**
- * 生成代码的任务.
+ * 生成代码的自定义任务，任务被执行的时候，会调用generator方法。仿照ButterKnife的插件写的。
  */
-class R2Generator extends DefaultTask {
+class R3Generator extends DefaultTask {
 
     def SUPPORT = ["anim", "array", "attr", "bool", "color", "dimen",
                    "drawable", "id", "integer", "layout", "menu", "plurals", "string", "style", "styleable"]
@@ -37,14 +37,14 @@ class R2Generator extends DefaultTask {
     // Invoked by Gradle.
     @SuppressWarnings("unused")
     @TaskAction
-    void brewJava() {
+    void generator() {
         System.println("=======执行到这里======= " + rFile)
         if (null != rFile) {
-            br(outputDir, rFile.getSingleFile(), packagename, className)
+            write(outputDir, rFile.getSingleFile(), packagename, className)
         }
     }
 
-    void br(File outputDir, File rFile, String packageName, String className) {
+    void write(File outputDir, File rFile, String packageName, String className) {
         System.println("=======packageName是======= " + packageName)
         rFile.eachLine { String str ->
             handleLineStr(str)
@@ -54,13 +54,17 @@ class R2Generator extends DefaultTask {
             generaClass.addType(it.value.build())
         }
         JavaFile fileBuild = JavaFile.builder(packageName, generaClass.build())
-                .addFileComment("Generated code from Butter Knife gradle plugin. Do not modify!")
+                .addFileComment("Generated code from WeFind gradle plugin. Do not modify!")
                 .build()
         fileBuild.writeTo(outputDir)
         System.println("=======最后的集合是======= " + resourceTypes)
 
     }
 
+    /**
+     * 读取R文件中的没一行之后，需要分割字符串。
+     * @param str
+     */
     void handleLineStr(String str) {
         // 类似于这样的的: int attr actionModeSelectAllDrawable 0x7f020018
 
@@ -77,7 +81,7 @@ class R2Generator extends DefaultTask {
         }
         //第二元素是属性的所属类型.
         def valueType = values[1]
-        if (!SUPPORT.contains(valueType)) {
+        if ("id" != valueType) {
             return
         }
         //获取属性值的名字.
