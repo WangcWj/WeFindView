@@ -48,10 +48,10 @@ public class ViewCompiler extends AbstractProcessor {
     @Override
     public synchronized void init(ProcessingEnvironment processingEnvironment) {
         super.init(processingEnvironment);
-        mMessager = processingEnvironment.getMessager();
-        elementUtils = processingEnvironment.getElementUtils();
-        typeUtils = processingEnvironment.getTypeUtils();
-    }
+            mMessager = processingEnvironment.getMessager();
+            elementUtils = processingEnvironment.getElementUtils();
+            typeUtils = processingEnvironment.getTypeUtils();
+        }
 
     @Override
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
