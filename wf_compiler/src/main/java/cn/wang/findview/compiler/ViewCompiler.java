@@ -1,26 +1,44 @@
 package cn.wang.findview.compiler;
 
 import com.google.auto.service.AutoService;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.sun.source.util.Trees;
+import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.tree.TreeScanner;
 
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
@@ -29,6 +47,9 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
 import cn.wang.findview.annotation.FindView;
+
+import static java.util.Objects.requireNonNull;
+import static javax.lang.model.element.ElementKind.INTERFACE;
 
 /**
  * Created to :
@@ -43,15 +64,37 @@ public class ViewCompiler extends AbstractProcessor {
     private Messager mMessager;
     private Elements elementUtils;
     private Types typeUtils;
-    private List<Integer> mViewIds;
+    private Map<Element, List<ViewBean>> mRes = new HashMap<>();
+
+    private @Nullable
+    Trees trees;
+    private final RScanner rScanner = new RScanner();
+    private Filer mFiler;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnvironment) {
         super.init(processingEnvironment);
-            mMessager = processingEnvironment.getMessager();
-            elementUtils = processingEnvironment.getElementUtils();
-            typeUtils = processingEnvironment.getTypeUtils();
+        mMessager = processingEnvironment.getMessager();
+        elementUtils = processingEnvironment.getElementUtils();
+        typeUtils = processingEnvironment.getTypeUtils();
+        mFiler = processingEnvironment.getFiler();
+        try {
+            trees = Trees.instance(processingEnv);
+        } catch (IllegalArgumentException ignored) {
+            try {
+                // Get original ProcessingEnvironment from Gradle-wrapped one or KAPT-wrapped one.
+                for (Field field : processingEnv.getClass().getDeclaredFields()) {
+                    if (field.getName().equals("delegate") || field.getName().equals("processingEnv")) {
+                        field.setAccessible(true);
+                        ProcessingEnvironment javacEnv = (ProcessingEnvironment) field.get(processingEnv);
+                        trees = Trees.instance(javacEnv);
+                        break;
+                    }
+                }
+            } catch (Throwable ignored2) {
+            }
         }
+    }
 
     @Override
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
@@ -59,39 +102,70 @@ public class ViewCompiler extends AbstractProcessor {
             Set<? extends Element> elements = roundEnvironment.getElementsAnnotatedWith(FindView.class);
             if (null != elements && elements.size() > 0) {
                 mMessager.printMessage(Diagnostic.Kind.NOTE, "===========开始咯============");
-
                 Iterator<? extends Element> iterator = elements.iterator();
                 while (iterator.hasNext()) {
                     Element element = iterator.next();
                     handleElement(element);
                 }
+                mMessager.printMessage(Diagnostic.Kind.NOTE, "===========结束了============");
             }
-        } catch (Exception e) {
+            generaCode();
 
+        } catch (Exception e) {
+            mMessager.printMessage(Diagnostic.Kind.ERROR, "Exception = " + e.getMessage());
         }
         return true;
     }
 
+    private void generaCode() throws Exception {
+        mMessager.printMessage(Diagnostic.Kind.NOTE, "mViewIds size  " + mRes.size());
+        if (mRes.size() <= 0) {
+            return;
+        }
+        Set<Element> keys = mRes.keySet();
+        for (Element key : keys) {
+
+            List<ViewBean> viewBeans = mRes.get(key);
+            if (null == viewBeans || viewBeans.size() <= 0) {
+                continue;
+            }
+            TypeSpec.Builder builder = TypeSpec.classBuilder(key.getSimpleName() + "_findView")
+                    .addModifiers(Modifier.PUBLIC)
+                    .addJavadoc("DO NOT EDIT THIS FILE!!! IT WAS GENERATED BY register.\n");
+            TypeName typeName = ParameterizedTypeName.get(key.asType());
+            ParameterSpec ps = ParameterSpec.builder(typeName, "target").build();
+
+            TypeMirror viewTypeMirror = elementUtils.getTypeElement(ViewCompilerConstant.VIEW_TYPE).asType();
+            TypeName view = ParameterizedTypeName.get(viewTypeMirror);
+            ParameterSpec psTwo = ParameterSpec.builder(view, "source").build();
+
+            MethodSpec.Builder method = MethodSpec.methodBuilder("register")
+                    .addModifiers(Modifier.PUBLIC)
+                    .addParameter(ps)
+                    .addParameter(psTwo);
+            for (ViewBean bean : viewBeans) {
+                method.addStatement("target.$L = source.findViewById($L)", bean.getFieldName(), bean.getId().code);
+            }
+            builder.addMethod(method.build());
+            JavaFile javaFile = JavaFile.builder("cn.wang.findview", builder.build()).build();
+            javaFile.writeTo(mFiler);
+        }
+        mRes.clear();
+    }
+
     private void handleElement(Element element) {
         TypeMirror viewTypeMirror = elementUtils.getTypeElement(ViewCompilerConstant.VIEW_TYPE).asType();
-        if(mViewIds == null){
-            mViewIds = new ArrayList<>();
-        }
-        mMessager.printMessage(Diagnostic.Kind.NOTE, "-----元素是： " + element);
         ElementKind kind = element.getKind();
         //确定我们只要字段类型的
         if (!kind.isField()) {
             return;
         }
-        mMessager.printMessage(Diagnostic.Kind.NOTE, "是 Field字段   " + element);
         //获取该属性所属类元素.
         TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
         //查看属性的限制符。private的访问不到在外部类中。
         if (!canGeneratedCode(element, enclosingElement)) {
             return;
         }
-        mMessager.printMessage(Diagnostic.Kind.NOTE, "且可以访问到 " + element);
-
         TypeMirror typeMirror = element.asType();
         if (typeMirror.getKind() == TypeKind.TYPEVAR) {
             //是一个属性元素.
@@ -100,7 +174,7 @@ public class ViewCompiler extends AbstractProcessor {
             typeMirror = tv.getUpperBound();
         }
         //属性不是View的话就返回.
-        if (!typeUtils.isSubtype(typeMirror, viewTypeMirror)) {
+        if (!typeUtils.isSubtype(typeMirror, viewTypeMirror) && isInterface(typeMirror)) {
             return;
         }
         FindView annotation = element.getAnnotation(FindView.class);
@@ -108,13 +182,48 @@ public class ViewCompiler extends AbstractProcessor {
             return;
         }
         int value = annotation.value();
-        String className = enclosingElement.getSimpleName().toString();
-        mMessager.printMessage(Diagnostic.Kind.NOTE, "类型也是View的 " + value+"  simpleName  "+className);
-        mViewIds.add(value);
+        Id resourceId = elementToId(element, FindView.class, value);
+        if (null != resourceId) {
+            ViewBean viewBean = new ViewBean(element.getSimpleName().toString(), resourceId);
+            mMessager.printMessage(Diagnostic.Kind.NOTE, "resourceId   " + viewBean);
+            List<ViewBean> viewBeans = mRes.get(enclosingElement);
+            if (null == viewBeans) {
+                viewBeans = new ArrayList<>();
+            }
+            if (!viewBeans.contains(viewBean)) {
+                viewBeans.add(viewBean);
+            }
+            mRes.put(enclosingElement,viewBeans);
+        }
+    }
 
-        mMessager.printMessage(Diagnostic.Kind.NOTE, "-----元素的ElementKind 是： " + kind);
+    private Id elementToId(Element element, Class<? extends Annotation> annotation, int value) {
+        JCTree tree = (JCTree) trees.getTree(element, getMirror(element, annotation));
+        // tree can be null if the references are compiled types and not source
+        if (tree != null) {
+            rScanner.reset();
+            tree.accept(rScanner);
+            if (!rScanner.resourceIds.isEmpty()) {
+                return rScanner.resourceIds.values().iterator().next();
+            }
+        }
+        return new Id(value);
+    }
 
+    private @Nullable
+    AnnotationMirror getMirror(Element element,
+                               Class<? extends Annotation> annotation) {
+        for (AnnotationMirror annotationMirror : element.getAnnotationMirrors()) {
+            if (annotationMirror.getAnnotationType().toString().equals(annotation.getCanonicalName())) {
+                return annotationMirror;
+            }
+        }
+        return null;
+    }
 
+    private boolean isInterface(TypeMirror typeMirror) {
+        return typeMirror instanceof DeclaredType
+                && ((DeclaredType) typeMirror).asElement().getKind() == INTERFACE;
     }
 
     /**
@@ -128,22 +237,50 @@ public class ViewCompiler extends AbstractProcessor {
      */
     private boolean canGeneratedCode(Element element, TypeElement typeElement) {
         boolean needContinue = true;
-
         Set<Modifier> modifiers = element.getModifiers();
         if (modifiers.contains(Modifier.PRIVATE) || modifiers.contains(Modifier.STATIC)) {
             needContinue = false;
         }
-
         Set<Modifier> typeElementModifiers = typeElement.getModifiers();
         if (typeElementModifiers.contains(Modifier.PRIVATE)) {
             needContinue = false;
         }
-
         if (typeElement.getKind() != ElementKind.CLASS) {
             needContinue = false;
         }
 
         return needContinue;
+    }
+
+    private static class RScanner extends TreeScanner {
+        Map<Integer, Id> resourceIds = new LinkedHashMap<>();
+
+        @Override
+        public void visitSelect(JCTree.JCFieldAccess jcFieldAccess) {
+            Symbol symbol = jcFieldAccess.sym;
+            if (symbol.getEnclosingElement() != null
+                    && symbol.getEnclosingElement().getEnclosingElement() != null
+                    && symbol.getEnclosingElement().getEnclosingElement().enclClass() != null) {
+                try {
+                    int value = (Integer) requireNonNull(((Symbol.VarSymbol) symbol).getConstantValue());
+                    resourceIds.put(value, new Id(value, symbol));
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
+        @Override
+        public void visitLiteral(JCTree.JCLiteral jcLiteral) {
+            try {
+                int value = (Integer) jcLiteral.value;
+                resourceIds.put(value, new Id(value));
+            } catch (Exception ignored) {
+            }
+        }
+
+        void reset() {
+            resourceIds.clear();
+        }
     }
 
     @Override

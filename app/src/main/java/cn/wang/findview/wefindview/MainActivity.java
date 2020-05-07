@@ -7,27 +7,22 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import cn.wang.findview.MainActivity_findView;
 import cn.wang.findview.annotation.FindView;
 import cn.wang.findview.main.DemoMainActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    @FindView(value = 123)
-    private String a;
 
-    @FindView(value = 3434)
-    private TextView mView;
+    @FindView(R.id.demo_text)
+    public TextView mView;
 
-    @FindView(value = 787987)
-    ImageView mImage;
-
-    @FindView(value = 123)
-    String b;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         float scaledDensity = getResources().getDisplayMetrics().scaledDensity;
 
         float density = getResources().getDisplayMetrics().density;
