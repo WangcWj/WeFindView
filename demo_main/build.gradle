@@ -29,6 +29,7 @@ dependencies {
     implementation 'com.android.support.constraint:constraint-layout:1.1.3'
 
     implementation project(':we_findview')
+    annotationProcessor project(':wf_compiler')
 }
 
 sourceCompatibility = "1.8"

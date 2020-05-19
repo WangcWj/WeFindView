@@ -7,32 +7,38 @@ import android.view.View;
 import android.widget.TextView;
 
 
+import java.lang.reflect.Method;
+
 import cn.wang.findview.annotation.FindView;
 
 public class DemoMainActivity extends AppCompatActivity {
 
-    @FindView(WeFindR.id.demo_text)
-    TextView mDemoText;
+    @FindView(WeFindR.id.bnt)
+    public TextView mBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-       final View viewById = findViewById(R.id.demo_text);
-       final View viewById2 = findViewById(R.id.demo_text2);
-        viewById.post(new Runnable() {
-            @Override
-            public void run() {
-                Log.e("cc.wang","DemoMainActivity.run.1111  "+viewById.getHeight());
+        setContentView(R.layout.activity_demo);
+        try {
+            Class<?> aClass = Class.forName("cn.wang.findview.DemoMainActivity_findView");
+            Method[] methods = aClass.getMethods();
+            Object o = aClass.newInstance();
+            Method register = null;
+            for (int i = 0; i < methods.length; i++) {
+                Method method = methods[i];
+                if ("register".equals(method.getName())) {
+                    register = method;
+                    break;
+                }
             }
-        });
-        viewById2.post(new Runnable() {
-            @Override
-            public void run() {
-                Log.e("cc.wang","DemoMainActivity.run.2222 "+viewById2.getHeight());
-            }
-        });
+            register.invoke(o, this, this.getWindow().getDecorView());
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("WANG", "MainActivity.Exception" + e);
+            return;
+        }
+      Log.e("WANG","DemoMainActivity.onCreate"+mBtn);
 
     }
 }
